@@ -35,6 +35,11 @@ async function createMap() {
   countriesGeo.features.forEach((d) => {
     countryPoint[d.properties.iso3] = d.properties.geo_point_2d;
   });
+  // Accessor for country code to a name
+  const countryName = {};
+  countriesGeo.features.forEach((d) => {
+    countryName[d.properties.iso3] = d.properties.name;
+  });
 
   // Chart Dimensions
   let dimensions = {
@@ -194,7 +199,7 @@ async function createMap() {
     }
     //Accessor functions
     const rAccessor = (d) =>
-      d3.min([bubbleScale(countryMetricMap[d.id]), maxBub]);
+      d3.min([bubbleScale(countryMetricMap[d.id]), maxBub + 1]);
     const xAccessor = (d) => d.properties.scaledCoord[0];
     const yAccessor = (d) => d.properties.scaledCoord[1];
 
@@ -236,34 +241,83 @@ async function createMap() {
     simulation.force("link").links(topDestLinks);
     simulation.restart();
 
+    const originX = projection(originPoint)[0];
+    const originY = projection(originPoint)[1];
+    // Ring connecting all bubbles
     const ring = ringG
       .append("circle")
-      .attr("cx", projection(originPoint)[0])
-      .attr("cy", projection(originPoint)[1])
-      .attr("r", ringRadius)
+      .attr("cx", originX)
+      .attr("cy", originY)
+      .attr("r", 0)
       .attr("class", "ring")
       .attr("opacity", 0);
+    // Bubbles representing destinations
     const bubbles = ringG
       .selectAll("circle:not(.ring)")
       .data(topDestNodes)
       .join("circle")
       .attr("class", "bubble")
-      .attr("cx", xAccessor)
-      .attr("cy", yAccessor)
-      .attr("r", rAccessor)
-      .attr("opacity", 0);
+      .attr("cx", originX)
+      .attr("cy", originY)
+      .attr("r", 0)
+      .attr("opacity", 0)
+      .on("mouseover", mouseover)
+      .on("mousemove", mousemove)
+      .on("mouseleave", mouseleave);
+    bubbles.filter((d) => d.id === originCode).attr("fill", "green");
+
+    var tt_name = ringG
+      .append("text")
+      .attr("text-anchor", "middle")
+      .text("")
+      .attr("opacity", 0)
+      .lower();
+    var tt_val = ringG
+      .append("text")
+      .attr("text-anchor", "middle")
+      .text("")
+      .attr("opacity", 0)
+      .lower();
+
+    function mouseover(event, d) {
+      tt_name
+        .attr("opacity", 1)
+        .attr("x", originX)
+        .attr("y", originY - ringRadius - 5)
+        // .append("svg:tspan")
+        .attr("class", "tt-text")
+        .text(`${countryName[d.id]}`);
+      const s = "s";
+      tt_val
+        .attr("opacity", 1)
+        .attr("x", originX)
+        .attr("y", originY + (ringRadius + 10))
+        .attr("class", "tt-text")
+        .text(
+          `${countryMetricMap[d.id]} Incident${
+            countryMetricMap[d.id] > 1 ? `s` : ``
+          }`
+        );
+      d3.select(this).style("fill", "blue");
+    }
+    function mousemove(event, d) {}
+    function mouseleave(event) {
+      tt_name.attr("opacity", 0);
+      tt_val.attr("opacity", 0);
+      d3.select(this).style("fill", "orangered");
+    }
 
     function endSim() {
-      const tran = 500;
+      const tran = 750;
       bubbles
+        .transition()
+        .duration(tran)
+        .ease(d3.easeBounceOut)
         .attr("cx", (d) => d.x)
         .attr("cy", (d) => d.y)
-        .merge(ring)
-        .transition()
-        .delay(zoomTransition)
-        .duration(tran)
+        .attr("r", rAccessor)
         .attr("opacity", 1);
-      ring.transition().delay(zoomTransition).duration(tran).attr("opacity", 1);
+      ring.transition().duration(tran).attr("opacity", 1).attr("r", ringRadius);
     }
   }
   function deleteRing() {
@@ -305,7 +359,7 @@ async function createMap() {
       .filter(":not(.active)")
       .transition()
       .duration(fadeTransition)
-      .attr("opacity", 0.5);
+      .attr("opacity", 0.2);
     // Setup the zoom transform
     bounds
       .transition()

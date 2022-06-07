@@ -76,6 +76,18 @@ body {
     transform-origin: center center;
     z-index: 10;
   }
+  .map-tooltip {	
+    position: absolute;			
+    text-align: center;			
+    width: 60px;					
+    height: 28px;					
+    padding: 2px;				
+    font: 12px sans-serif;		
+    background: lightsteelblue;	
+    border: 0px;		
+    border-radius: 8px;			
+    pointer-events: none;			
+}
 
 .country {
     stroke: black;
@@ -86,13 +98,14 @@ body {
 }
 
 .active {
-    fill: rgb(196, 255, 86);
+    fill: rgb(255, 177, 175);
+    stroke: none;
 }
 
 .bubble {
     fill: orangered;
     stroke: black;
-    stroke-width: 0.5px;
+    stroke-width: 0.2px;
 }
 .link {
     fill: none;
@@ -102,4 +115,11 @@ body {
     fill: none;
     stroke: black;
     stroke-width: 0.5px;
+}
+.tt-text {
+    font-size: 7px;
+    font-family: sans-serif;
+    fill: black;
+    stroke: black;
+    stroke-width: 0.1px;
 }
