@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" href="./css/styles.css" />
+    <link rel="shortcut icon" href="#" />
+    <title>D3-Flights Data</title>
+  </head>
+
+  <body>
+    <h3>Number of Incidents by Country</h3>
+    <div id="map-wrapper" class="wrapper"></div>
+    <h3>Number of Fatalities</h3>
+    <div id="timeline-wrapper" class="wrapper">
+      <div id="timeline-tooltip" class="tooltip">
+        <div class="tooltip-date">
+          <span id="date"></span>
+        </div>
+        <div class="tooltip-fatalities">
+          <span id="num-fatalities"></span>
+        </div>
+      </div>
+    </div>
+  </body>
+
+  <script src="./js/d3.v7.min.js"></script>
+  <script src="./js/timelineChart.js"></script>
+  <script src="./js/map.js"></script>
+  <script src="./js/topojson.3.0.2.min.js"></script>
+</html>
