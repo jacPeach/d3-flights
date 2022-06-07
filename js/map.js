@@ -68,6 +68,8 @@ async function createMap() {
     );
   const map = bounds.append("g");
   const ringG = bounds.append("g");
+  const zoom = d3.zoom().scaleExtent([1, 8]).on("zoom", zoomed);
+  bounds.call(zoom).on("mousedown.zoom", null);
 
   // Create Scales
   const numDeparting = numDepartingCountries.values();
@@ -78,7 +80,15 @@ async function createMap() {
     .interpolator(colorScheme);
 
   // Setup the geographical data
-  const projection = d3.geoMercator();
+  const projection = d3
+    .geoMercator()
+    .scale(dimensions.boundedWidth / 2 / Math.PI)
+    .rotate([-11, 0])
+    .translate([
+      dimensions.boundedWidth / 2,
+      (dimensions.boundedHeight * 1.35) / 2,
+    ])
+    .precision(0.1);
   const pathGenerator = d3.geoPath(projection);
   const countries = map
     .selectAll(".country")
@@ -132,8 +142,8 @@ async function createMap() {
       )
       .range([minBub, maxBub]);
 
-    let topLinks = [];
-    let links = [];
+    let topDestNodes = [];
+    let topDestLinks = [];
     const originPoint = [
       countryPoint[originCode][1],
       countryPoint[originCode][0],
@@ -147,42 +157,30 @@ async function createMap() {
         projection(dest),
         bubbleDist
       );
-      if (originCode !== d.name) {
-        topLinks.push({
-          type: "LineString",
-          coordinates: [o, dest],
-          properties: {
-            dist: Math.sqrt(
-              (o[0] + scaledD[0]) ** 2 + (o[1] + scaledD[1]) ** 2
-            ),
-            scaledCoord: scaledD,
-          },
-          id: d.name,
-          x: scaledD[0],
-          y: scaledD[1],
-        });
-      } else {
-        topLinks.push({
-          type: "LineString",
-          coordinates: [o, dest],
-          properties: {
-            dist: Math.sqrt(
-              (o[0] + scaledD[0]) ** 2 + (o[1] + scaledD[1]) ** 2
-            ),
-            scaledCoord: scaledD,
-          },
-          id: d.name,
-          fx: scaledD[0],
-          fy: scaledD[1],
-        });
+      topDestNodes.push({
+        type: "LineString",
+        coordinates: [o, dest],
+        properties: {
+          dist: Math.sqrt((o[0] + scaledD[0]) ** 2 + (o[1] + scaledD[1]) ** 2),
+          scaledCoord: scaledD,
+        },
+        id: d.name,
+        x: scaledD[0],
+        y: scaledD[1],
+      });
+      // Fix in place - center
+      if (originCode === d.name) {
+        topDestNodes[topDestNodes.length - 1].fx =
+          topDestNodes[topDestNodes.length - 1].x;
+        topDestNodes[topDestNodes.length - 1].fy =
+          topDestNodes[topDestNodes.length - 1].y;
       }
-      links.push({
+      topDestLinks.push({
         source: originCode,
         target: d.name,
         value: 20,
       });
     });
-    console.log(links, topLinks);
     // Cut off a line at a set distance from the origin to place the bubbles
     function limitDistance(o, d, dis) {
       const oldA = d[0] - o[0];
@@ -199,6 +197,8 @@ async function createMap() {
       d3.min([bubbleScale(countryMetricMap[d.id]), maxBub]);
     const xAccessor = (d) => d.properties.scaledCoord[0];
     const yAccessor = (d) => d.properties.scaledCoord[1];
+
+    // Draws lines to each destination - replaced by bubbles
     // ringG
     //   .selectAll("path")
     //   .data(topLinks)
@@ -213,7 +213,7 @@ async function createMap() {
 
     // Setup a force simulation - parameters give decent results
     const simulation = d3
-      .forceSimulation(topLinks)
+      .forceSimulation(topDestNodes)
       .alphaMin(0.01)
       .velocityDecay(0.5)
       .alphaDecay(0.1)
@@ -233,27 +233,24 @@ async function createMap() {
       )
       .on("end", endSim)
       .stop();
-    simulation.force("link").links(links);
+    simulation.force("link").links(topDestLinks);
     simulation.restart();
 
-    console.log(projection(originPoint));
     const ring = ringG
       .append("circle")
       .attr("cx", projection(originPoint)[0])
       .attr("cy", projection(originPoint)[1])
       .attr("r", ringRadius)
       .attr("class", "ring")
-      .attr("opacity", 0)
-      .attr("transform", transformF);
+      .attr("opacity", 0);
     const bubbles = ringG
       .selectAll("circle:not(.ring)")
-      .data(topLinks)
+      .data(topDestNodes)
       .join("circle")
       .attr("class", "bubble")
       .attr("cx", xAccessor)
       .attr("cy", yAccessor)
       .attr("r", rAccessor)
-      .attr("transform", transformF)
       .attr("opacity", 0);
 
     function endSim() {
@@ -284,22 +281,22 @@ async function createMap() {
     }
     active.classed("active", false);
     active = d3.select(this).classed("active", true);
-    const activeBound = pathGenerator.bounds(d);
-    const dx = activeBound[1][0] - activeBound[0][0];
-    const dy = activeBound[1][1] - activeBound[0][1];
-    const x = (activeBound[0][0] + activeBound[1][0]) / 2;
-    const y = (activeBound[0][1] + activeBound[1][1]) / 2;
-    // Max zoom of 7
-    const scale = d3.min([
-      0.4 /
-        Math.max(dx / dimensions.boundedWidth, dy / dimensions.boundedHeight),
-      7,
+    // Get bounds of the country and zoom scale between limits
+    const [[x0, y0], [x1, y1]] = pathGenerator.bounds(d),
+      upper = 7,
+      lower = 3;
+    const scale = d3.max([
+      d3.min([
+        0.4 /
+          Math.max(
+            (x1 - x0) / dimensions.boundedWidth,
+            (y1 - y0) / dimensions.boundedHeight
+          ),
+        upper,
+      ]),
+      lower,
     ]);
-    const translate = [
-      dimensions.boundedWidth / 2 - scale * x,
-      dimensions.boundedHeight / 2 - scale * y,
-    ];
-    transformF = `translate(${translate})scale(${scale})`;
+    // Fade out the other paths
     countries
       .transition()
       .duration(zoomTransition)
@@ -309,21 +306,45 @@ async function createMap() {
       .transition()
       .duration(fadeTransition)
       .attr("opacity", 0.5);
+    // Setup the zoom transform
+    bounds
+      .transition()
+      .duration(zoomTransition)
+      .call(
+        zoom.transform,
+        d3.zoomIdentity
+          .translate(dimensions.boundedWidth / 2, dimensions.boundedHeight / 2)
+          .scale(scale)
+          .translate(-(x0 + x1) / 2, -(y0 + y1) / 2),
+        d3.pointer(event, bounds.node())
+      );
+    // Finally run the simulation for the destination bubbles
     createRing(d);
   }
   function resetZoom() {
+    deleteRing();
     active.classed("active", false);
     active = d3.select(null);
 
-    transformF = "";
-    countries
+    // Fade back in
+    countries.transition().duration(fadeTransition).attr("opacity", 1);
+    // Zoom back out
+    bounds
       .transition()
       .duration(zoomTransition)
-      .attr("transform", transformF)
-      .transition()
-      .duration(fadeTransition)
-      .attr("opacity", 1);
-    deleteRing();
+      .call(
+        zoom.transform,
+        d3.zoomIdentity,
+        d3
+          .zoomTransform(bounds.node())
+          .invert([dimensions.boundedWidth / 2, dimensions.boundedHeight / 2])
+      );
+  }
+  function zoomed(event) {
+    const { transform } = event;
+    countries.attr("transform", transform);
+    ringG.attr("transform", transform);
+    countries.attr("stroke-width", 0.5 / transform.k);
   }
 }
 
