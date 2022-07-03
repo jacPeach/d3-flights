@@ -4,7 +4,7 @@ const minBub = 1;
 const maxBub = 4;
 const bubbleDist = 10;
 const fadeTransition = 250;
-const colorScheme = d3.interpolateOranges;
+const colorScheme = d3.interpolatePurples;
 const topN = 10;
 const ringRadius = 10;
 
@@ -111,6 +111,59 @@ async function createMap() {
     .on("click", zoomIn);
   var transformF = "";
 
+  // Add peripherals
+  const defs = wrapper.append("defs");
+  const legendGradientID = "legend-gradient";
+  const gradient = defs
+    .append("linearGradient")
+    .attr("id", legendGradientID)
+    .selectAll("stop")
+    .data(colorScale.range())
+    .enter()
+    .append("stop")
+    .attr("stop-color", (d) => d)
+    .attr(
+      "offset",
+      (d, i) =>
+        `${
+          (i * 100) / 1 // 2 is one less than our array's length
+        }%`
+    );
+  const legendG = bounds
+    .append("g")
+    .attr("class", "legend-container")
+    .attr("opacity", 1)
+    .attr("transform", `translate(${120},${dimensions.boundedHeight - 30})`);
+  const buffer = 10;
+  const legendBackground = legendG
+    .append("rect")
+    .attr("fill", "white")
+    .attr("x", -buffer)
+    .attr("y", -35 - buffer)
+    .attr("width", 150 + buffer)
+    .attr("height", 75)
+    .attr("stroke", "black")
+    .attr("stroke-width", "1px");
+  const legendText = legendG
+    .append("text")
+    .text("Number of Incidents")
+    .attr("class", "legend-title")
+    .attr("y", -25);
+  const legendSubText = legendG
+    .append("text")
+    .text("1920 - End of 2021")
+    .attr("class", "legend-subtitle")
+    .attr("y", -10);
+  const legendWidth = 120;
+  const legendHeight = 16;
+  const legendGradient = legendG
+    .append("rect")
+    // .attr("x", -legendWidth / 2 + 50)
+    .attr("height", legendHeight)
+    .attr("width", legendWidth)
+    .style("fill", `url(#${legendGradientID})`);
+
+  // Add interaction
   // Define a function to plot the top ten destinations when one country is active
   function createRing(origin) {
     const originCode = idAccessor(origin);
@@ -326,7 +379,6 @@ async function createMap() {
     ringG.selectAll("path").remove();
   }
 
-  // Add interaction
   // Zoom to clicked country
   var active = d3.select(null);
   function zoomIn(event, d) {
@@ -360,6 +412,7 @@ async function createMap() {
       .transition()
       .duration(fadeTransition)
       .attr("opacity", 0.2);
+    legendG.transition().duration(zoomTransition).attr("opacity", 0);
     // Setup the zoom transform
     bounds
       .transition()
@@ -393,6 +446,7 @@ async function createMap() {
           .zoomTransform(bounds.node())
           .invert([dimensions.boundedWidth / 2, dimensions.boundedHeight / 2])
       );
+    legendG.transition().duration(zoomTransition).attr("opacity", 1);
   }
   function zoomed(event) {
     const { transform } = event;
