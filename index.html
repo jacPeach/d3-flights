@@ -7,9 +7,46 @@
   </head>
 
   <body>
+    <h2>Flight Incident Dataset</h2>
+    <div style="text-align: left; align-items: left" class="description">
+      <span
+        >This page presents some of the Global airplane accidents, failures, and
+        hijacks data from</span
+      >
+      <a
+        href="https://www.kaggle.com/datasets/deepcontractor/aircraft-accidents-failures-hijacks-dataset"
+        >this dataset</a
+      >
+      <span
+        >from Kaggle. This is mainly to learn and try things out using D3 and
+        this book - </span
+      ><a href="https://www.newline.co/fullstack-d3"
+        >https://www.newline.co/fullstack-d3</a
+      >
+      <p>The visualisations below show:</p>
+      <ul>
+        <li>The total number of incidents by origin country and destination</li>
+        <li>A timeline of fatilities</li>
+      </ul>
+    </div>
     <h3>Number of Incidents by Country</h3>
+    <div class="description">
+      <p>
+        A "flow" map where the size of the bubbles indicates the number of
+        incidents between 2 countries. Click on a country to display the bubbles
+        from that country. Click again to reset. Bubbles are placed in the
+        direction of that destination and adjusted to prevent overlapping using
+        d3-force.
+      </p>
+    </div>
     <div id="map-wrapper" class="wrapper"></div>
     <h3>Number of Fatalities</h3>
+    <div class="description">
+      <p>
+        Simple timeline with brushing ability. Click and drag to zoom,
+        double-click to reset.
+      </p>
+    </div>
     <div id="timeline-wrapper" class="wrapper">
       <div id="timeline-tooltip" class="tooltip">
         <div class="tooltip-date">
@@ -22,8 +59,8 @@
     </div>
   </body>
 
-  <script src="./js/d3.v7.min.js"></script>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
   <script src="./js/timelineChart.js"></script>
   <script src="./js/map.js"></script>
-  <script src="./js/topojson.3.0.2.min.js"></script>
+  <!-- <script src="./js/topojson.3.0.2.min.js"></script> -->
 </html>

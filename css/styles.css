@@ -10,6 +10,11 @@ body {
     background: #f8f9fa;
   }
 
+.description {
+    margin-right: auto; 
+    margin-left: 0;
+}
+
 .wrapper {
     padding-top: 20px;
     padding-bottom: 20px;
